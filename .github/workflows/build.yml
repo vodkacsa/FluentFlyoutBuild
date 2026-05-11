@@ -1,5 +1,5 @@
 name: Build EXE
-on: [workflow_dispatch] # Allows you to run it manually
+on: [workflow_dispatch]
 
 jobs:
   build:
@@ -8,16 +8,23 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '6.0.x' # Or the version used by the project
+          dotnet-version: '8.0.x' # Updated for modern compatibility
 
-      - name: Build Project
-        run: dotnet build --configuration Release
+      - name: Restore Dependencies
+        run: msbuild FluentFlyout.sln /t:Restore /p:Configuration=Release
+
+      - name: Build WPF Project Only
+        # We target the WPF folder directly to avoid the MSIX error
+        run: msbuild FluentFlyoutWPF\FluentFlyout.csproj /p:Configuration=Release /p:Platform=x64
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: FluentFlyout-EXE
-          path: '**/bin/Release/**/FluentFlyout.exe'
+          name: FluentFlyout-Standalone
+          path: 'FluentFlyoutWPF\bin\x64\Release\net*-windows*\**\*'
