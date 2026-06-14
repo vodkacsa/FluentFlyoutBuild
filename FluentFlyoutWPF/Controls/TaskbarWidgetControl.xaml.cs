@@ -107,12 +107,18 @@ public partial class TaskbarWidgetControl : UserControl
 
     public void ApplyWindowsTheme()
     {
-        bool isDark = WindowsThemeHelper.GetCurrentWindowsTheme() == WindowsTheme.Dark;
+        WindowsThemeDetector.GetWindowsTheme(out _, out var systemTheme);
+        bool isDark = systemTheme == WindowsThemeDetector.ThemeMode.Dark;
+
         var foreground = new SolidColorBrush(isDark
             ? Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF)
             : Color.FromArgb(0xE4, 0x1C, 0x1C, 0x1C));
+
         SongTitle.Foreground = foreground;
         SongArtist.Foreground = foreground;
+        PreviousButton.Foreground = foreground;
+        PlayPauseButton.Foreground = foreground;
+        NextButton.Foreground = foreground;
     }
 
     private void Grid_MouseEnter(object sender, MouseEventArgs e)
@@ -121,7 +127,10 @@ public partial class TaskbarWidgetControl : UserControl
 
         SolidColorBrush targetBackgroundBrush;
         // hover effects with animations, hard-coded colors because I can't find the resource brushes
-        if (WindowsThemeHelper.GetCurrentWindowsTheme() == WindowsTheme.Dark)
+        WindowsThemeDetector.GetWindowsTheme(out _, out var systemTheme);
+        bool isDark = systemTheme == WindowsThemeDetector.ThemeMode.Dark;
+
+        if (isDark)
         { // dark mode
             targetBackgroundBrush = new SolidColorBrush(Color.FromArgb(197, 255, 255, 255)) { Opacity = 0.075 };
             TopBorder.BorderBrush = new SolidColorBrush(Color.FromArgb(93, 255, 255, 255)) { Opacity = 0.25 };
@@ -208,9 +217,19 @@ public partial class TaskbarWidgetControl : UserControl
             _cachedArtistText = currentArtist;
         }
 
-        double logicalWidth = Math.Max(_cachedTitleWidth, _cachedArtistWidth) + 55; // add margin for cover image
         // maximum width limit, same as Windows native widget
-        logicalWidth = Math.Min(logicalWidth, _nativeWidgetsPadding / _scale);
+        double maxLogicalWidth = _nativeWidgetsPadding / _scale;
+        double logicalWidth;
+        if (SettingsManager.Current.TaskbarWidgetFixedWidth)
+        {
+            // pin to maximum width so right-aligned controls don't shift between songs
+            logicalWidth = maxLogicalWidth;
+        }
+        else
+        {
+            logicalWidth = Math.Max(_cachedTitleWidth, _cachedArtistWidth) + 55; // add margin for cover image
+            logicalWidth = Math.Min(logicalWidth, maxLogicalWidth);
+        }
 
         SongTitle.Width = Math.Max(logicalWidth - 58, 0);
         SongArtist.Width = Math.Max(logicalWidth - 58, 0);
@@ -409,10 +428,7 @@ public partial class TaskbarWidgetControl : UserControl
     {
         if (_mainWindow == null) return;
 
-        var mediaManager = _mainWindow.mediaManager;
-        if (mediaManager == null) return;
-
-        var focusedSession = mediaManager.GetFocusedSession();
+        var focusedSession = _mainWindow.GetActiveMediaSession();
         if (focusedSession == null) return;
 
         await focusedSession.ControlSession.TrySkipPreviousAsync();
@@ -422,30 +438,17 @@ public partial class TaskbarWidgetControl : UserControl
     {
         if (_mainWindow == null) return;
 
-        var mediaManager = _mainWindow.mediaManager;
-        if (mediaManager == null) return;
-
-        var focusedSession = mediaManager.GetFocusedSession();
+        var focusedSession = _mainWindow.GetActiveMediaSession();
         if (focusedSession == null) return;
 
-        if (_isPaused) // paused
-        {
-            await focusedSession.ControlSession.TryPlayAsync();
-        }
-        else // playing
-        {
-            await focusedSession.ControlSession.TryPauseAsync();
-        }
+        await focusedSession.ControlSession.TryTogglePlayPauseAsync();
     }
 
     private async void Next_Click(object sender, RoutedEventArgs e)
     {
         if (_mainWindow == null) return;
 
-        var mediaManager = _mainWindow.mediaManager;
-        if (mediaManager == null) return;
-
-        var focusedSession = mediaManager.GetFocusedSession();
+        var focusedSession = _mainWindow.GetActiveMediaSession();
         if (focusedSession == null) return;
 
         await focusedSession.ControlSession.TrySkipNextAsync();
