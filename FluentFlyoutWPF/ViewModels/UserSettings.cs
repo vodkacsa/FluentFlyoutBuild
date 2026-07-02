@@ -459,6 +459,49 @@ public partial class UserSettings : ObservableObject
     public partial bool TaskbarWidgetAnimated { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the taskbar widget scrolling text (marquee) is enabled for long titles.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool TaskbarWidgetScrollingEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the taskbar widget scrolling text should loop forever.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool TaskbarWidgetScrollingTextLoopForever { get; set; }
+
+    /// <summary>
+    /// Gets or sets the speed of the taskbar widget scrolling text.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TaskbarWidgetScrollingTextSpeedText))]
+    public partial int TaskbarWidgetScrollingTextSpeed { get; set; }
+
+    [XmlIgnore]
+    public string TaskbarWidgetScrollingTextSpeedText
+    {
+        get => TaskbarWidgetScrollingTextSpeed.ToString();
+        set
+        {
+            if (int.TryParse(value, out var result))
+            {
+                TaskbarWidgetScrollingTextSpeed = result switch
+                {
+                    > 100 => 100,
+                    < 1 => 1,
+                    _ => result
+                };
+            }
+            else
+            {
+                TaskbarWidgetScrollingTextSpeed = 20;
+            }
+
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the taskbar visualizer is enabled.
     /// </summary>
     /// <remarks>For now, this requires Premium and Taskbar Widget to be enabled.</remarks>
@@ -481,13 +524,13 @@ public partial class UserSettings : ObservableObject
     /// Returns a list of apps that are allowed to display media/update the taskbar.
     /// </summary>
     [ObservableProperty]
-    public partial ObservableCollection<string> AllowedApps { get; set; } = new();
+    public partial ObservableCollection<string> AllowedApps { get; set; }
 
     /// <summary>
     /// Returns a list of apps that are NOT allowed to display media/update the taskbar.
     /// </summary>
     [ObservableProperty]
-    public partial ObservableCollection<string> BlockedApps { get; set; } = new();
+    public partial ObservableCollection<string> BlockedApps { get; set; }
 
     /// <summary>
     /// Position of the visualizer, where 0 and 1 are to the left or right of the widget.
@@ -531,6 +574,12 @@ public partial class UserSettings : ObservableObject
     /// </summary>
     [ObservableProperty]
     public partial int TaskbarVisualizerAudioSensitivity { get; set; }
+
+    /// <summary>
+    /// Autohide taskbar. Only does something if TaskbarVisualizerBaseline is enabled (doesn't autohide by default).
+    /// </summary>
+    [ObservableProperty]
+    public partial bool TaskbarVisualizerBaselineAutoHide { get; set; }
 
     [ObservableProperty]
     public partial bool VolumeControlEnabled { get; set; }
@@ -623,6 +672,16 @@ public partial class UserSettings : ObservableObject
     [ObservableProperty]
     public partial bool LegacyTaskbarWidthEnabled { get; set; }
 
+    [ObservableProperty]
+    public partial Guid Uuid { get; set; }
+
+    [XmlIgnore]
+    [ObservableProperty]
+    public partial Guid SessionId { get; set; } = Guid.NewGuid();
+
+    [ObservableProperty]
+    public partial bool AnonymousTelemetryAllowed { get; set; }
+
     [XmlIgnore]
     private bool _initializing = true;
 
@@ -686,26 +745,34 @@ public partial class UserSettings : ObservableObject
         TaskbarWidgetControlsEnabled = false;
         TaskbarWidgetControlsPosition = 1;
         TaskbarWidgetAnimated = true;
+        TaskbarWidgetScrollingEnabled = false;
+        TaskbarWidgetScrollingTextSpeed = 20;
+        TaskbarWidgetScrollingTextLoopForever = false;
         TaskbarVisualizerEnabled = false;
         AppFilteringEnabled = false;
         AppFilteringMode = 0;
         TaskbarVisualizerPosition = 1;
-        TaskbarVisualizerClickable = false;
+        TaskbarVisualizerClickable = true;
         TaskbarVisualizerBarCount = 10;
         TaskbarVisualizerCenteredBars = false;
         TaskbarVisualizerBaseline = false;
         TaskbarVisualizerAudioSensitivity = 2;
         TaskbarVisualizerAudioPeakLevel = 3;
+        TaskbarVisualizerBaselineAutoHide = false;
         VolumeControlEnabled = false;
         VolumeControlAboveMediaFlyout = false;
         VolumeControlDuration = 3000;
-        VolumeMixerEnabled = true;
+        VolumeMixerEnabled = false;
         VolumeMixerHighlightActiveApps = false;
         AcrylicBlurOpacity = 175;
         UseAlbumArtAsAccentColor = false;
         LastUpdateNotificationUnixSeconds = 0;
         ShowUpdateNotifications = true;
         LegacyTaskbarWidthEnabled = false;
+        Uuid = Guid.NewGuid();
+        AnonymousTelemetryAllowed = true;
+        AllowedApps = [];
+        BlockedApps = [];
 
         PropertyChanged += OnPropertyChangedSaveSettings;
     }
@@ -883,6 +950,32 @@ public partial class UserSettings : ObservableObject
     {
         MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
         mainWindow.UpdateTaskbar();
+    }
+
+    partial void OnTaskbarWidgetScrollingEnabledChanged(bool oldValue, bool newValue)
+    {
+        if (oldValue == newValue || _initializing) return;
+        UpdateTaskbarMarquees();
+    }
+
+    partial void OnTaskbarWidgetScrollingTextLoopForeverChanged(bool oldValue, bool newValue)
+    {
+        if (oldValue == newValue || _initializing) return;
+        UpdateTaskbarMarquees();
+    }
+
+    partial void OnTaskbarWidgetScrollingTextSpeedChanged(int oldValue, int newValue)
+    {
+        if (oldValue == newValue || _initializing) return;
+        UpdateTaskbarMarquees();
+    }
+
+    private void UpdateTaskbarMarquees()
+    {
+        MainWindow mainWindow = (MainWindow)Application.Current.MainWindow;
+        var widget = mainWindow.taskbarWindow?.Widget;
+        if (widget == null) return;
+        widget.Dispatcher.Invoke(widget.UpdateMarquees);
     }
 
     partial void OnTaskbarVisualizerEnabledChanged(bool oldValue, bool newValue)
