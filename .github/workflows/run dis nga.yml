@@ -1,28 +1,29 @@
 name: Upstream Sync, Build & Release
 
 on:
-  workflow_dispatch: # Manual trigger only
+  workflow_dispatch:
 
 permissions:
-  contents: write # Required to push synced code, tags, and create releases
+  contents: write
 
 jobs:
   sync-build-release:
     runs-on: windows-latest
 
     strategy:
+      fail-fast: false
       matrix:
         configuration: ["GitHub Release", "Release"]
 
     env:
       SOLUTION_PATH: FluentFlyout.sln
-      WAP_PROJECT_PATH: FluentFlyoutMSIX\FluentFlyoutMSIX.wapproj
+      WAP_PROJECT_PATH: FluentFlyoutMSIX/FluentFlyoutMSIX.wapproj
       CONFIGURATION: ${{ matrix.configuration }}
       PLATFORM: x64
 
     steps:
       - name: Checkout target branch
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: master
           fetch-depth: 0
@@ -35,70 +36,86 @@ jobs:
           upstream_sync_branch: master
           upstream_sync_repo: unchihugo/FluentFlyout
 
-      # Force checkout master again to guarantee the runner sees the newly synced code
       - name: Checkout latest synced code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           ref: master
+          fetch-depth: 0
 
       - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v3
+        uses: microsoft/setup-msbuild@v2
 
       - name: Decode signing certificate
+        shell: pwsh
         run: |
+          if (-not "${{ secrets.MSIX_CERT_BASE64 }}") {
+            throw "MSIX_CERT_BASE64 secret is missing."
+          }
           $cert = [Convert]::FromBase64String("${{ secrets.MSIX_CERT_BASE64 }}")
           [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\cert.pfx", $cert)
 
       - name: Restore NuGet packages
-        run: nuget restore $env:SOLUTION_PATH
+        shell: pwsh
+        run: nuget restore "$env:SOLUTION_PATH"
 
       - name: Extract app version
         id: get_version
+        shell: pwsh
         run: |
-          [xml]$manifest = Get-Content 'FluentFlyoutMSIX\Package.appxmanifest'
+          [xml]$manifest = Get-Content "FluentFlyoutMSIX/Package.appxmanifest"
           $fullVersion = $manifest.Package.Identity.Version
           $version = ($fullVersion -split '\.')[0..2] -join '.'
-          echo "APP_VERSION=$version" >> $env:GITHUB_ENV
-          echo "version=$version" >> $env:GITHUB_OUTPUT
+          "APP_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Build & Package (MSIX)
+        shell: pwsh
         run: |
-          msbuild $env:WAP_PROJECT_PATH `
-            /p:Configuration=$env:CONFIGURATION `
-            /p:Platform=$env:PLATFORM `
+          msbuild "$env:WAP_PROJECT_PATH" `
+            /p:Configuration="$env:CONFIGURATION" `
+            /p:Platform="$env:PLATFORM" `
             /p:UapAppxPackageBuildMode=StoreUpload `
             /p:AppxPackageDir="$env:GITHUB_WORKSPACE\AppxPackages\\" `
-            /p:AppxPackageSigningEnabled=false `
+            /p:AppxPackageSigningEnabled=false
 
       - name: Prepare installer structure
+        shell: pwsh
         run: |
           $outDir = "$env:GITHUB_WORKSPACE\InstallerOutput_${{ matrix.configuration }}"
-          New-Item -ItemType Directory -Path $outDir | Out-Null
-          $testFolder = Get-ChildItem "$env:GITHUB_WORKSPACE\AppxPackages" -Directory |
-            Where-Object { $_.Name -like '*_Test' } | Select-Object -First 1
-          Move-Item $testFolder.FullName "$outDir\SystemFiles"
-          Copy-Item ".github\build-files\FluentFlyout_Installer.bat" "$outDir\"
-          Copy-Item ".github\build-files\README.txt" "$outDir\"
+          New-Item -ItemType Directory -Path $outDir -Force | Out-Null
 
-      # Zip the installer output directory so it can be cleanly uploaded to the release assets
+          $testFolder = Get-ChildItem "$env:GITHUB_WORKSPACE\AppxPackages" -Directory -ErrorAction Stop |
+            Where-Object { $_.Name -like '*_Test' } |
+            Select-Object -First 1
+
+          if (-not $testFolder) {
+            throw "No *_Test folder found under AppxPackages."
+          }
+
+          Move-Item $testFolder.FullName "$outDir\SystemFiles" -Force
+          Copy-Item ".github/build-files/FluentFlyout_Installer.bat" "$outDir\" -Force
+          Copy-Item ".github/build-files/README.txt" "$outDir\" -Force
+
       - name: Archive Installer Output
+        shell: pwsh
         run: |
-          $zipName = "FluentFlyout_${{ env.APP_VERSION }}_${{ env.PLATFORM }}_${{ matrix.configuration == 'GitHub Release' && 'Installer' || 'Release' }}.zip"
-          Compress-Archive -Path "$env:GITHUB_WORKSPACE\InstallerOutput_${{ matrix.configuration }}\*" -DestinationPath "$env:GITHUB_WORKSPACE\$zipName"
-          echo "ZIP_NAME=$zipName" >> $env:GITHUB_ENV
+          $suffix = if ("${{ matrix.configuration }}" -eq "GitHub Release") { "Installer" } else { "Release" }
+          $zipName = "FluentFlyout_${{ env.APP_VERSION }}_${{ env.PLATFORM }}_${suffix}.zip"
+          Compress-Archive -Path "$env:GITHUB_WORKSPACE\InstallerOutput_${{ matrix.configuration }}\*" -DestinationPath "$env:GITHUB_WORKSPACE\$zipName" -Force
+          "ZIP_NAME=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Create or Update GitHub Release
+        if: matrix.configuration == 'GitHub Release'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.get_version.outputs.version }}
           name: Release v${{ steps.get_version.outputs.version }}
           body: |
             Automated release following successful upstream sync.
-            
+
             Synchronized with latest changes from `unchihugo/FluentFlyout`.
           draft: false
           prerelease: false
-          files: |
-            ${{ env.ZIP_NAME }}
+          files: ${{ env.ZIP_NAME }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
