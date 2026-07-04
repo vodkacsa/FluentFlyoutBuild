@@ -94,6 +94,15 @@ public partial class SettingsWindow : FluentWindow
             instance.Activate();
             instance.Focus();
         }
+
+        if (navigationPage != null)
+        {
+            var pageType = System.Reflection.Assembly
+                .GetExecutingAssembly()
+                .GetType($"FluentFlyoutWPF.Pages.{navigationPage}");
+            if (pageType != null)
+                NavigateToPage(pageType);
+        }
     }
 
     private void SearchBox_SuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
@@ -249,6 +258,9 @@ public partial class SettingsWindow : FluentWindow
                     RootNavigation.IsPaneOpen = !wasPaneOpen;
                     await Task.Delay(10);
                     RootNavigation.IsPaneOpen = wasPaneOpen;
+
+                    await Task.Delay(300);
+                    RootNavigation.Navigate(typeof(HomePage));
 
                     BuildSearchItems();
                 }, System.Windows.Threading.DispatcherPriority.Loaded);
