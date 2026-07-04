@@ -48,7 +48,7 @@
 			</ui:TitleBar.Resources>
 			<ui:TitleBar.CenterContent>
 				<ui:AutoSuggestBox x:Name="SearchBox"
-									PlaceholderText="Search settings"
+								   PlaceholderText="{DynamicResource SearchSettings}"
 								   Width="380"
 								   HorizontalAlignment="Center"
 								   VerticalAlignment="Center"
