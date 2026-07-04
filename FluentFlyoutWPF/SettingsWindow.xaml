@@ -39,19 +39,19 @@
 			</ui:TitleBar.Icon>
 			<ui:TitleBar.Resources>
 				<Style TargetType="{x:Type ui:TitleBarButton}" BasedOn="{StaticResource {x:Type ui:TitleBarButton}}">
-					<Setter Property="Height" Value="32" />
+					<Setter Property="Height" Value="48" />
+					<Setter Property="Width" Value="48" />
 				</Style>
 			</ui:TitleBar.Resources>
 			<ui:TitleBar.CenterContent>
 				<Grid x:Name="SearchGrid" VerticalAlignment="Center">
 					<ui:AutoSuggestBox x:Name="SearchBox"
-									   UpdateTextOnSelect="true"
 									   PlaceholderText="Search settings..." Width="350" HorizontalAlignment="Center" VerticalAlignment="Center" SuggestionChosen="SearchBox_SuggestionChosen" TextChanged="SearchBox_TextChanged" ClearButtonEnabled="True">
 						<ui:AutoSuggestBox.ItemTemplate>
 							<DataTemplate>
 								<StackPanel Orientation="Vertical" Margin="0,-2">
 									<TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" MaxWidth="300" />
-									<TextBlock Text="{Binding Subtitle}" TextTrimming="CharacterEllipsis" MaxWidth="300" FontSize="12" Opacity="0.7" />
+									<TextBlock Text="{Binding Subtitle}" TextTrimming="CharacterEllipsis" MaxWidth="300" FontSize="12" Opacity="0.7" Visibility="{Binding Subtitle, Converter={StaticResource NullToCollapsedConverter}}" />
 								</StackPanel>
 							</DataTemplate>
 						</ui:AutoSuggestBox.ItemTemplate>

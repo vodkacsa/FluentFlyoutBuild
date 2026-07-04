@@ -372,7 +372,7 @@ public partial class SettingsWindow : FluentWindow
     public class SearchItem
     {
         public string Title { get; set; } = string.Empty;
-        public string Subtitle { get; set; } = string.Empty;
+        public string? Subtitle { get; set; }
         public Type? TargetPageType { get; set; }
         public string? TargetElementId { get; set; }
         public override string ToString() => Title;

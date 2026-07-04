@@ -7,7 +7,7 @@
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:controls="clr-namespace:MicaWPF.Controls;assembly=MicaWPF"
       xmlns:viewModels="clr-namespace:FluentFlyoutWPF.ViewModels"
-      xmlns:utils="clr-namespace:FluentFlyoutWPF.Classes.Utils"
+      xmlns:converters="clr-namespace:FluentFlyoutWPF.Classes.Converters"
       mc:Ignorable="d"
       Title="VolumeMixerWindow" Height="50" Width="240"
       ResizeMode="NoResize"
@@ -40,10 +40,9 @@
     </Window.Triggers>
     
     <Window.Resources>
-        <utils:DecimalPercentageToFullConverter x:Key="DecimalPercentage" />
-        <utils:VolumeToSpeakerSymbolConverter x:Key="VolumeToSpeaker" />
-        <utils:NullToVisibilityConverter x:Key="NullToCollapsed" NullValue="Visible" NonNullValue="Collapsed" />
-        <utils:BoolToAccentBrushConverter x:Key="ActiveToAccentBrush" ActiveOpacity="0.1" />
+        <converters:DecimalPercentageToFullConverter x:Key="DecimalPercentage" />
+        <converters:VolumeToSpeakerSymbolConverter x:Key="VolumeToSpeaker" />
+        <converters:BoolToAccentBrushConverter x:Key="ActiveToAccentBrush" ActiveOpacity="0.1" />
     </Window.Resources>
 
     <StackPanel>
@@ -95,7 +94,7 @@
                                         <Grid>
                                             <ui:SymbolIcon Symbol="DesktopSpeaker24" FontSize="16"
                                                    Opacity="{Binding IsMuted, Converter={StaticResource BoolToHalfFullOpacityConverter}}"
-                                                   Visibility="{Binding Icon, Converter={StaticResource NullToCollapsed}}" />
+                                                   Visibility="{Binding Icon, Converter={StaticResource NullToVisibleConverter}}" />
                                             <Image Source="{Binding Icon}" Width="16" Height="16"
                                                    Opacity="{Binding IsMuted, Converter={StaticResource BoolToHalfFullOpacityConverter}}" />
                                             <ui:SymbolIcon Symbol="SpeakerMute28" FontSize="12" Margin="0,0,-16,-16"
