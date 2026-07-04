@@ -79,13 +79,6 @@ public partial class SettingsWindow : FluentWindow
     {
         if (args.SelectedItem is SearchItem selectedItem)
         {
-            // Clear the search text asynchronously to avoid being overwritten by the AutoSuggestBox setting the text to the selected item
-            Dispatcher.BeginInvoke(new Action(() =>
-            {
-                sender.Text = string.Empty;
-                sender.IsSuggestionListOpen = false;
-            }), System.Windows.Threading.DispatcherPriority.Loaded);
-
             if (selectedItem.TargetPageType != null)
             {
                 if (_currentPageType != selectedItem.TargetPageType)
@@ -170,7 +163,7 @@ public partial class SettingsWindow : FluentWindow
                     {
                         From = 1.0,
                         To = 0.5,
-                        Duration = new Duration(TimeSpan.FromMilliseconds(250)),
+                        Duration = new Duration(TimeSpan.FromMilliseconds(300)),
                         AutoReverse = true,
                         RepeatBehavior = new System.Windows.Media.Animation.RepeatBehavior(2)
                     };

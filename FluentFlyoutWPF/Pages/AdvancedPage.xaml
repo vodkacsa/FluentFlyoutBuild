@@ -66,7 +66,7 @@
                 </StackPanel>
             </ui:CardExpander>
 
-            <ui:CardExpander Icon="{ui:SymbolIcon Blur24}" ContentPadding="0" Margin="0,0,0,3">
+            <ui:CardExpander x:Name="AcrylicFlyoutsCard" Tag="Indexable" Icon="{ui:SymbolIcon Blur24}" ContentPadding="0" Margin="0,0,0,3">
                 <ui:CardExpander.Header>
                     <StackPanel Orientation="Vertical">
                         <TextBlock Text="{DynamicResource AcrylicWindowTitle}" FontSize="14" FontWeight="Regular" VerticalAlignment="Center" />
@@ -74,7 +74,7 @@
                     </StackPanel>
                 </ui:CardExpander.Header>
                 <StackPanel>
-                    <ui:CardControl x:Name="MediaFlyoutTitleCard" Tag="Indexable" Background="Transparent" BorderBrush="{ui:ThemeResource CardStrokeColorDefaultSolidBrush}" BorderThickness="0,0,0,1" CornerRadius="0" Padding="52,16,16,16">
+                    <ui:CardControl Background="Transparent" BorderBrush="{ui:ThemeResource CardStrokeColorDefaultSolidBrush}" BorderThickness="0,0,0,1" CornerRadius="0" Padding="52,16,16,16">
                         <ui:CardControl.Header>
                             <StackPanel Orientation="Vertical">
                                 <TextBlock Text="{DynamicResource MediaFlyoutTitle}" FontSize="14" FontWeight="Regular" VerticalAlignment="Center" />
@@ -83,7 +83,7 @@
                         <controls:ToggleSwitch IsChecked="{Binding MediaFlyoutAcrylicWindowEnabled, Mode=TwoWay}" />
                     </ui:CardControl>
 
-                    <ui:CardControl x:Name="NextUpCustomizationTitleCard" Tag="Indexable" Background="Transparent" BorderBrush="{ui:ThemeResource CardStrokeColorDefaultSolidBrush}" BorderThickness="0,0,0,1" CornerRadius="0" Padding="52,16,16,16">
+                    <ui:CardControl Background="Transparent" BorderBrush="{ui:ThemeResource CardStrokeColorDefaultSolidBrush}" BorderThickness="0,0,0,1" CornerRadius="0" Padding="52,16,16,16">
                         <ui:CardControl.Header>
                             <StackPanel Orientation="Vertical">
                                 <TextBlock Text="{DynamicResource NextUpCustomizationTitle}" FontSize="14" FontWeight="Regular" VerticalAlignment="Center" />
@@ -92,7 +92,7 @@
                         <controls:ToggleSwitch IsChecked="{Binding NextUpAcrylicWindowEnabled, Mode=TwoWay}" />
                     </ui:CardControl>
 
-                    <ui:CardControl x:Name="LockKeysCustomizationTitleCard" Tag="Indexable" Background="Transparent" BorderBrush="{ui:ThemeResource CardStrokeColorDefaultSolidBrush}" BorderThickness="0" CornerRadius="0" Padding="52,16,16,16">
+                    <ui:CardControl Background="Transparent" BorderBrush="{ui:ThemeResource CardStrokeColorDefaultSolidBrush}" BorderThickness="0" CornerRadius="0" Padding="52,16,16,16">
                         <ui:CardControl.Header>
                             <StackPanel Orientation="Vertical">
                                 <TextBlock Text="{DynamicResource LockKeysCustomizationTitle}" FontSize="14" FontWeight="Regular" VerticalAlignment="Center" />

@@ -191,7 +191,7 @@
                 </StackPanel>
             </ui:CardControl>
 
-            <ui:CardControl Icon="{ui:SymbolIcon Speaker224}" Margin="0,0,0,12">
+            <ui:CardControl x:Name="TaskbarVisualizerOutputDeviceCard" Tag="Indexable" Icon="{ui:SymbolIcon Speaker224}" Margin="0,0,0,12">
                 <ui:CardControl.Header>
                     <StackPanel Orientation="Vertical">
                         <TextBlock FontSize="14" FontWeight="Regular" VerticalAlignment="Center">

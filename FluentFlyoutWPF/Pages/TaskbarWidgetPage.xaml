@@ -137,7 +137,7 @@
             </ui:CardControl>
 
             <!-- Padding settings -->
-            <ui:CardExpander Grid.Row="6" Icon="{ui:SymbolIcon Wrench24}" ContentPadding="0" Margin="0,0,0,12">
+            <ui:CardExpander x:Name="TaskbarWidgetPaddingSettingsCard" Tag="Indexable" Grid.Row="6" Icon="{ui:SymbolIcon Wrench24}" ContentPadding="0" Margin="0,0,0,12">
                 <ui:CardExpander.Header>
                     <StackPanel Orientation="Vertical">
                         <TextBlock Text="{DynamicResource TaskbarWidgetPaddingSettingsTitle}" FontSize="14" FontWeight="Regular" VerticalAlignment="Center" />
@@ -261,7 +261,7 @@
                 <controls:ToggleSwitch IsChecked="{Binding TaskbarWidgetAnimated, Mode=TwoWay}" IsEnabled="{Binding IsPremiumUnlocked}" />
             </ui:CardControl>
 
-            <ui:CardExpander Grid.Row="14" Icon="{ui:SymbolIcon TextDirectionHorizontalRight24}" ContentPadding="0" Margin="0,0,0,3">
+            <ui:CardExpander x:Name="TaskbarWidgetScrollingTextCard" Tag="Indexable" Grid.Row="14" Icon="{ui:SymbolIcon TextDirectionHorizontalRight24}" ContentPadding="0" Margin="0,0,0,3">
                 <ui:CardExpander.Header>
                     <Grid ColumnDefinitions="*, Auto">
                         <StackPanel Orientation="Vertical">

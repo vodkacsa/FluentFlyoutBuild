@@ -34,19 +34,27 @@
             Title="FluentFlyout"
             Grid.Row="0"
             Panel.ZIndex="1"
-			HorizontalContentAlignment="Center" VerticalContentAlignment="Center">
+			HorizontalContentAlignment="Center"
+			VerticalContentAlignment="Center">
 			<ui:TitleBar.Icon>
 				<ui:ImageIcon Source="/Resources/FluentFlyout2.ico" />
 			</ui:TitleBar.Icon>
 			<ui:TitleBar.Resources>
-				<Style TargetType="{x:Type ui:TitleBarButton}" BasedOn="{StaticResource {x:Type ui:TitleBarButton}}">
+				<Style TargetType="{x:Type ui:TitleBarButton}"
+					   BasedOn="{StaticResource {x:Type ui:TitleBarButton}}">
 					<Setter Property="Height" Value="48" />
 					<Setter Property="Width" Value="48" />
 				</Style>
 			</ui:TitleBar.Resources>
 			<ui:TitleBar.CenterContent>
 				<ui:AutoSuggestBox x:Name="SearchBox"
-									PlaceholderText="Search settings" Width="380" HorizontalAlignment="Center" VerticalAlignment="Center" SuggestionChosen="SearchBox_SuggestionChosen" TextChanged="SearchBox_TextChanged" ClearButtonEnabled="True">
+									PlaceholderText="Search settings"
+								   Width="380"
+								   HorizontalAlignment="Center"
+								   VerticalAlignment="Center"
+								   SuggestionChosen="SearchBox_SuggestionChosen"
+								   TextChanged="SearchBox_TextChanged"
+								   ClearButtonEnabled="True">
 					<ui:AutoSuggestBox.ItemTemplate>
 						<DataTemplate>
 							<StackPanel Orientation="Vertical" Margin="0,-2">
