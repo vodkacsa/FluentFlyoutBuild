@@ -285,4 +285,7 @@ Puoi contribuire alla traduzione su</system:String>
     <system:String x:Key="TaskbarWidgetScrollingTextLoopForeverTitle">Scorrimento continuo</system:String>
     <system:String x:Key="TaskbarWidgetScrollingTextLoopForeverDescription">Ripeti il testo all'infinito in una direzione invece di scorrere avanti e indietro.</system:String>
     <system:String x:Key="TaskbarWidgetScrollingTextSpeedDescription">Velocità di scorrimento del testo (pixel/secondo). Il valore predefinito è 20.</system:String>
+    <system:String x:Key="SearchSettings">Cerca impostazioni</system:String>
+    <system:String x:Key="TaskbarWidgetScrollingTextTitle">Testo Scorrevole</system:String>
+    <system:String x:Key="TaskbarWidgetScrollingTextSpeedTitle">Velocità di scorrimento</system:String>
 </ResourceDictionary>
