@@ -85,7 +85,8 @@ public partial class AboutViewModel : ObservableObject
         "FireWall-code",
         "saini07ayush",
         "biuseverinoneto",
-        "theantonyis"
+        "theantonyis",
+        "mlynado"
     ];
 
 
