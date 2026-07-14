@@ -184,9 +184,6 @@ public partial class MainWindow : MicaWindow
 
         string previousVersion = SettingsManager.Current.LastKnownVersion;
         _ = CheckForExperimentsOnStartupAsync(previousVersion);
-        // show onboarding to new users (no previous version stored = user has never run the app before)
-        //if (previousVersion == string.Empty)
-        //    OnboardingWindow.ShowInstance();
 
         // apply other things on new thread
         Dispatcher.Invoke(() =>

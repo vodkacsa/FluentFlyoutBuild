@@ -85,7 +85,9 @@ public partial class AboutViewModel : ObservableObject
         "FireWall-code",
         "saini07ayush",
         "biuseverinoneto",
-        "theantonyis"
+        "theantonyis",
+        "mlynado",
+        "Korvus"
     ];
 
 
@@ -124,6 +126,18 @@ public partial class AboutViewModel : ObservableObject
             License = "MIT",
             Url = "https://github.com/Simnico99/MicaWPF"
         },
+        new LicenseInfo{
+            Name = "Microsoft.CodeAnalysis.Analyzers",
+            Version = "3.3.4",
+            License = "MIT",
+            Url = "https://github.com/dotnet/sdk"
+        },
+        new LicenseInfo{
+            Name = "Microsoft.CodeAnalysis.CSharp",
+            Version = "4.8.0",
+            License = "MIT",
+            Url = "https://github.com/dotnet/roslyn"
+        },
         new LicenseInfo
         {
             Name = "Microsoft.Toolkit.Uwp.Notifications",
@@ -143,13 +157,6 @@ public partial class AboutViewModel : ObservableObject
             Version = "6.1.3",
             License = "BSD-3-Clause",
             Url = "https://nlog-project.org/"
-        },
-        new LicenseInfo
-        {
-            Name = "System.Drawing.Common",
-            Version = "10.0.0",
-            License = "MIT",
-            Url = "https://dot.net/"
         },
         new LicenseInfo
         {

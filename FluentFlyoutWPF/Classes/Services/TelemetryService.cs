@@ -4,7 +4,6 @@
 using FluentFlyout.Classes.Settings;
 using FluentFlyoutWPF.Classes.Clients;
 using NLog;
-using System.Net.Http.Json;
 
 namespace FluentFlyoutWPF.Classes.Services;
 
@@ -19,7 +18,9 @@ public static class TelemetryService
 
         try
         {
-            string appVersion = SettingsManager.Current.LastKnownVersion + "-" + (SettingsManager.Current.IsStoreVersion ? "store" : "github");
+            string appVersion = (SettingsManager.Current.LastKnownVersion ?? "unknown")
+                + "-"
+                + (SettingsManager.Current.IsStoreVersion ? "store" : "github");
 
             var telemetryData = new
             {
@@ -31,7 +32,7 @@ public static class TelemetryService
                 appVersion,
             };
 
-            await FluentFlyoutApiClient.Client.PostAsJsonAsync(ApiEndpoint, telemetryData);
+            await FluentFlyoutApiClient.PostAsJsonAsync(ApiEndpoint, telemetryData);
         }
         catch (TaskCanceledException ex)
         {
