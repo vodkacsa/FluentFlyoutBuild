@@ -1,0 +1,98 @@
+name: Build personal FluentFlyout release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      APP_VERSION: 2.16.1
+      RELEASE_TAG: v2.16.1-pc.1
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@v3
+
+      - name: Create a package signing certificate
+        shell: pwsh
+        run: |
+          $cert = New-SelfSignedCertificate `
+            -Type CodeSigningCert `
+            -Subject 'CN=49793F74-1457-4B66-A672-4ED3A640FC76' `
+            -CertStoreLocation 'Cert:\CurrentUser\My' `
+            -KeyExportPolicy Exportable `
+            -HashAlgorithm SHA256 `
+            -NotAfter (Get-Date).AddYears(2)
+          "SIGNING_THUMBPRINT=$($cert.Thumbprint)" >> $env:GITHUB_ENV
+
+      - name: Restore NuGet packages
+        shell: pwsh
+        run: nuget restore FluentFlyout.sln
+
+      - name: Build signed x64 package
+        shell: pwsh
+        run: |
+          msbuild 'FluentFlyoutMSIX\FluentFlyoutMSIX.wapproj' `
+            '/p:Configuration=GitHub Release' `
+            '/p:Platform=x64' `
+            '/p:UapAppxPackageBuildMode=StoreUpload' `
+            "/p:AppxPackageDir=$env:GITHUB_WORKSPACE\AppxPackages\" `
+            '/p:AppxPackageSigningEnabled=true' `
+            '/p:GenerateTemporaryStoreCertificate=false' `
+            "/p:PackageCertificateThumbprint=$env:SIGNING_THUMBPRINT"
+          if ($LASTEXITCODE -ne 0) { throw "MSBuild failed with exit code $LASTEXITCODE" }
+
+      - name: Verify and package installer
+        shell: pwsh
+        run: |
+          [xml]$manifest = Get-Content 'FluentFlyoutMSIX\Package.appxmanifest'
+          if ($manifest.Package.Identity.Version -ne "$env:APP_VERSION.0") {
+            throw "Unexpected app version: $($manifest.Package.Identity.Version)"
+          }
+          $testFolders = @(Get-ChildItem 'AppxPackages' -Directory | Where-Object Name -Like '*_Test')
+          if ($testFolders.Count -ne 1) { throw "Expected one test package folder; found $($testFolders.Count)" }
+          $outDir = Join-Path $env:GITHUB_WORKSPACE 'InstallerOutput'
+          New-Item -ItemType Directory -Path $outDir | Out-Null
+          Move-Item $testFolders[0].FullName (Join-Path $outDir 'SystemFiles')
+          Copy-Item '.github\build-files\FluentFlyout_Installer.bat' $outDir
+          Copy-Item '.github\build-files\README.txt' $outDir
+
+          $systemFiles = Join-Path $outDir 'SystemFiles'
+          $bundles = @(Get-ChildItem $systemFiles -Filter '*.msixbundle')
+          if ($bundles.Count -ne 1) { throw "Expected one MSIX bundle; found $($bundles.Count)" }
+          $cert = Get-Item "Cert:\CurrentUser\My\$env:SIGNING_THUMBPRINT"
+          Get-ChildItem $systemFiles -Filter '*.cer' | Remove-Item
+          $certPath = Join-Path $systemFiles 'FluentFlyout.cer'
+          Export-Certificate -Cert $cert -FilePath $certPath | Out-Null
+          Import-Certificate -FilePath $certPath -CertStoreLocation 'Cert:\CurrentUser\TrustedPeople' | Out-Null
+          $signature = Get-AuthenticodeSignature $bundles[0].FullName
+          if ($signature.Status -ne 'Valid' -or
+              $signature.SignerCertificate.Thumbprint -ne $env:SIGNING_THUMBPRINT) {
+            throw "Bundle signature failed validation: $($signature.Status)"
+          }
+
+          $zip = Join-Path $env:GITHUB_WORKSPACE "FluentFlyout_$($env:APP_VERSION)_x64_Installer.zip"
+          Compress-Archive -Path (Join-Path $outDir '*') -DestinationPath $zip
+          "RELEASE_ZIP=$zip" >> $env:GITHUB_ENV
+
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          @'
+          FluentFlyout 2.16.1 x64, built from the latest main-repository source.
+
+          This package keeps the FluentFlyout package name and publisher and is intended to update a GitHub-installed 2.13.1 copy. It uses a new self-signed certificate. Download the installer zip, extract it, and run FluentFlyout_Installer.bat; approve the certificate installation prompt. GitHub builds require manual updates.
+          '@ | Set-Content -Path release-notes.txt
+          gh release create $env:RELEASE_TAG $env:RELEASE_ZIP `
+            --target $env:GITHUB_SHA `
+            --title "FluentFlyout $env:APP_VERSION (personal x64 build)" `
+            --notes-file release-notes.txt

@@ -13,6 +13,7 @@ permissions:
 
 jobs:
   build:
+    if: github.repository == 'unchihugo/FluentFlyout'
     runs-on: windows-latest
     
     strategy:
