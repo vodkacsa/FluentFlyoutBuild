@@ -1,1 +1,1 @@
-# you can download the premium version here for free. made by gpt 6 sol
+# FluentFlyout Premium version. already built. Takes 30 seconds to install. Easy.
