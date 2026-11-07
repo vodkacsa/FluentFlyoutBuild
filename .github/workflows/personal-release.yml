@@ -71,11 +71,11 @@ jobs:
           Get-ChildItem $systemFiles -Filter '*.cer' | Remove-Item
           $certPath = Join-Path $systemFiles 'FluentFlyout.cer'
           Export-Certificate -Cert $cert -FilePath $certPath | Out-Null
-          Import-Certificate -FilePath $certPath -CertStoreLocation 'Cert:\CurrentUser\TrustedPeople' | Out-Null
+          Import-Certificate -FilePath $certPath -CertStoreLocation 'Cert:\LocalMachine\TrustedPeople' | Out-Null
           $signature = Get-AuthenticodeSignature $bundles[0].FullName
           if ($signature.Status -ne 'Valid' -or
               $signature.SignerCertificate.Thumbprint -ne $env:SIGNING_THUMBPRINT) {
-            throw "Bundle signature failed validation: $($signature.Status)"
+            throw "Bundle signature failed validation: status=$($signature.Status); message=$($signature.StatusMessage); signer=$($signature.SignerCertificate.Thumbprint); expected=$env:SIGNING_THUMBPRINT"
           }
 
           $zip = Join-Path $env:GITHUB_WORKSPACE "FluentFlyout_$($env:APP_VERSION)_x64_Installer.zip"
