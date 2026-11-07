@@ -10,8 +10,8 @@ jobs:
   release:
     runs-on: windows-latest
     env:
-      APP_VERSION: 2.16.1
-      RELEASE_TAG: v2.16.1-pc.1
+      APP_VERSION: 2.16.1.1
+      RELEASE_TAG: v2.16.1-pc.2
 
     steps:
       - name: Check out source
@@ -24,7 +24,9 @@ jobs:
         shell: pwsh
         run: |
           $cert = New-SelfSignedCertificate `
-            -Type CodeSigningCert `
+            -Type Custom `
+            -KeyUsage DigitalSignature `
+            -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.3', '2.5.29.19={text}') `
             -Subject 'CN=49793F74-1457-4B66-A672-4ED3A640FC76' `
             -CertStoreLocation 'Cert:\CurrentUser\My' `
             -KeyExportPolicy Exportable `
@@ -53,7 +55,7 @@ jobs:
         shell: pwsh
         run: |
           [xml]$manifest = Get-Content 'FluentFlyoutMSIX\Package.appxmanifest'
-          if ($manifest.Package.Identity.Version -ne "$env:APP_VERSION.0") {
+          if ($manifest.Package.Identity.Version -ne $env:APP_VERSION) {
             throw "Unexpected app version: $($manifest.Package.Identity.Version)"
           }
           $testFolders = @(Get-ChildItem 'AppxPackages' -Directory | Where-Object Name -Like '*_Test')
@@ -68,6 +70,13 @@ jobs:
           $bundles = @(Get-ChildItem $systemFiles -Filter '*.msixbundle')
           if ($bundles.Count -ne 1) { throw "Expected one MSIX bundle; found $($bundles.Count)" }
           $cert = Get-Item "Cert:\CurrentUser\My\$env:SIGNING_THUMBPRINT"
+          $basicConstraints = $cert.Extensions | Where-Object { $_.Oid.Value -eq '2.5.29.19' }
+          $codeSigningEku = $cert.Extensions | Where-Object { $_.Oid.Value -eq '2.5.29.37' }
+          if (!$basicConstraints -or $basicConstraints.CertificateAuthority -or
+              !$codeSigningEku -or
+              $codeSigningEku.EnhancedKeyUsages.Value -notcontains '1.3.6.1.5.5.7.3.3') {
+            throw 'Signing certificate is not an end-entity code-signing certificate'
+          }
           Get-ChildItem $systemFiles -Filter '*.cer' | Remove-Item
           $certPath = Join-Path $systemFiles 'FluentFlyout.cer'
           Export-Certificate -Cert $cert -FilePath $certPath | Out-Null
@@ -88,7 +97,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           @'
-          FluentFlyout 2.16.1 x64, built from the latest main-repository source.
+          FluentFlyout 2.16.1.1 x64, built from the latest main-repository source.
 
           This package keeps the FluentFlyout package name and publisher and is intended to update a GitHub-installed 2.13.1 copy. It uses a new self-signed certificate. Download the installer zip, extract it, and run FluentFlyout_Installer.bat; approve the certificate installation prompt. GitHub builds require manual updates.
           '@ | Set-Content -Path release-notes.txt
