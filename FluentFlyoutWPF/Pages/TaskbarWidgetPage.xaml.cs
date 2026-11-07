@@ -1,7 +1,6 @@
 // Copyright (c) 2024-2026 The FluentFlyout Authors
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-using FluentFlyout.Classes;
 using FluentFlyout.Classes.Settings;
 using FluentFlyoutWPF.Classes;
 using FluentFlyoutWPF.Classes.Utils;
@@ -19,16 +18,16 @@ public partial class TaskbarWidgetPage : Page
         UpdateMonitorList();
     }
 
-    private async void UnlockPremiumButton_Click(object sender, RoutedEventArgs e)
-    {
-        LicenseManager.UnlockPremium(sender);
-    }
-
     private void UpdateMonitorList()
     {
         MonitorUtil.UpdateMonitorList(
             TaskbarWidgetSelectedMonitorComboBox,
             () => SettingsManager.Current.TaskbarWidgetSelectedMonitor,
             value => SettingsManager.Current.TaskbarWidgetSelectedMonitor = value);
+    }
+
+    private void AppFiltering_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        SettingsWindow.NavigateToPage(typeof(AppFilteringPage));
     }
 }

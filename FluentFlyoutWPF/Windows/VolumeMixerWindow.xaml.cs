@@ -13,6 +13,8 @@ using FluentFlyoutWPF.Classes;
 using FluentFlyoutWPF.ViewModels;
 using MicaWPF.Controls;
 using NLog;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Media.Animation;
 using static FluentFlyout.Classes.NativeMethods;
@@ -54,10 +56,11 @@ public partial class VolumeMixerWindow : MicaWindow
         _normalWidth = Width;
 
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
+        ViewModel.SessionVolumeChanged += OnSessionVolumeChanged;
     }
 
     // one day we might want to convert these to an interface
-    public async void ShowFlyout()
+    public async void ShowFlyout(bool startExpanded = false)
     {
         if (FullscreenDetector.IsFullscreenApplicationRunning())
             return;
@@ -73,13 +76,10 @@ public partial class VolumeMixerWindow : MicaWindow
 
         if (_isHiding)
         {
-            if (_nativeOsdElement == IntPtr.Zero)
+            _ = Task.Run(() =>
             {
-                _ = Task.Run(() =>
-                {
-                    HideVolumeOsd();
-                });
-            }
+                HideVolumeOsd();
+            });
 
             _isHiding = false;
             if (SettingsManager.Current.VolumeMixerAcrylicWindowEnabled)
@@ -98,7 +98,7 @@ public partial class VolumeMixerWindow : MicaWindow
             if (aboveMedia)
             {
                 Width = _mainWindow.Width;
-                _mainWindow.OpenAnimation(this, aboveReference: _mainWindow);
+                _mainWindow.OpenAnimation(this, aboveReference: _mainWindow, reserveNativeVolumeOsdSpace: true);
             }
             else
             {
@@ -107,8 +107,21 @@ public partial class VolumeMixerWindow : MicaWindow
             }
 
             Show();
-            //WindowHelper.SetNoActivate(this);
             WindowHelper.SetTopmost(this);
+
+            _ = Task.Run(() =>
+            {
+                Thread.Sleep(MainWindow.getDuration());
+                Dispatcher.Invoke(() =>
+                {
+                    if (startExpanded) ViewModel.IsExpanded = true;
+                });
+            });
+        }
+        else
+        {
+            // only expand if the flyout isn't expanded already
+            if (startExpanded) ViewModel.IsExpanded = true;
         }
 
         _cts.Cancel();
@@ -139,13 +152,7 @@ public partial class VolumeMixerWindow : MicaWindow
 
                     if (!mouseOverThis && !mouseOverMedia)
                     {
-                        _mainWindow.CloseAnimation(this);
-                        _isHiding = true;
-                        await Task.Delay(MainWindow.getDuration());
-                        if (_isHiding == false) return;
-
-                        WindowHelper.SetVisibility(this, false);
-                        ViewModel.IsExpanded = false;
+                        await FinishHideAsync();
                         break;
                     }
                 }
@@ -157,6 +164,38 @@ public partial class VolumeMixerWindow : MicaWindow
         }
     }
 
+    /// <summary>
+    /// Hides the flyout immediately, without waiting for the stay duration.
+    /// Used when the volume flyout is synced with the media flyout.
+    /// </summary>
+    public async void HideFlyout()
+    {
+        if (_isHiding)
+            return;
+
+        _cts.Cancel();
+        _lastFlyoutTime = 0; // dismissed on purpose: don't let the show cooldown swallow the next trigger
+        await FinishHideAsync();
+    }
+
+    /// <summary>
+    /// Plays the close animation, waits for it and hides the window.
+    /// Returns without hiding when the flyout was reopened while the animation was running.
+    /// </summary>
+    private async Task FinishHideAsync()
+    {
+        _mainWindow.CloseAnimation(this);
+        _isHiding = true;
+        await Task.Delay(MainWindow.getDuration());
+
+        if (!_isHiding)
+            return;
+
+        WindowHelper.SetVisibility(this, false);
+        ViewModel.IsExpanded = false;
+        _ = Task.Run(() => ShowVolumeOsd());
+    }
+
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(VolumeMixerViewModel.IsExpanded))
@@ -165,18 +204,54 @@ public partial class VolumeMixerWindow : MicaWindow
         }
     }
 
+    private void OnSessionVolumeChanged(object? sender, EventArgs e)
+    {
+        _mainWindow.taskbarWindow?.RefreshAppVolumeTooltip();
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+        ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        ViewModel.SessionVolumeChanged -= OnSessionVolumeChanged;
+        ViewModel.Dispose();
+        base.OnClosed(e);
+    }
+
     // derived from gpkgpk/HideVolumeOSD: https://github.com/gpkgpk/HideVolumeOSD
     private static void HideVolumeOsd()
     {
-        // find widget in XAML
-        IntPtr hwndXamlIsland, hwndOsd = IntPtr.Zero;
-        while ((hwndXamlIsland = FindWindowEx(IntPtr.Zero, IntPtr.Zero, "XamlExplorerHostIslandWindow", null)) != IntPtr.Zero)
+        if (_nativeOsdElement != IntPtr.Zero)
         {
-            if (hwndXamlIsland == IntPtr.Zero)
+            try
             {
-                continue;
-            }
+                Marshal.SetLastPInvokeError(0);
+                int prevStyle = SetWindowLong(_nativeOsdElement, GWL_EXSTYLE,
+                    _nativeOsdOriginalExStyle | WS_EX_LAYERED | WS_EX_TRANSPARENT);
+                if (prevStyle == 0 && Marshal.GetLastWin32Error() != 0)
+                    throw new Win32Exception(Marshal.GetLastWin32Error(), "SetWindowLong failed");
 
+                if (!SetWindowPos(_nativeOsdElement, 0, -99999, -99999, 0, 0,
+                    SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE))
+                    throw new Win32Exception(Marshal.GetLastWin32Error(), "SetWindowPos failed");
+
+                ShowWindow(_nativeOsdElement, SW_SHOWMINNOACTIVE);
+                Logger.Debug("Successfully hid volume OSD.");
+                return;
+            }
+            catch (Exception ex)
+            {
+                // continue with search for OSD window if the previous handle is invalid
+                Logger.Warn(ex, "Failed to hide volume OSD using previous handle. Attempting to find it again.");
+            }
+        }
+
+        // find widget in XAML; FindWindowEx must be given the previous handle as hwndChildAfter,
+        // otherwise it returns the same first island forever and this loop never terminates
+        IntPtr hwndXamlIsland = IntPtr.Zero, hwndOsd = IntPtr.Zero;
+        while ((hwndXamlIsland = FindWindowEx(IntPtr.Zero, hwndXamlIsland, "XamlExplorerHostIslandWindow", null)) != IntPtr.Zero)
+        {
             hwndOsd = FindWindowEx(hwndXamlIsland, IntPtr.Zero, "Windows.UI.Composition.DesktopWindowContentBridge", "DesktopWindowXamlSource");
             if (hwndOsd == IntPtr.Zero)
             {
@@ -191,7 +266,7 @@ public partial class VolumeMixerWindow : MicaWindow
                 continue;
             }
 
-            ShowWindow(hwndInputClass, 9); // SW_RESTORE
+            ShowWindow(hwndInputClass, SW_SHOWNOACTIVATE);
             if (GetWindowRect(hwndInputClass, out RECT rect))
             {
                 if (rect.Top == 0 && rect.Left == 0 && rect.Bottom == 0 && rect.Right == 0)
@@ -215,8 +290,8 @@ public partial class VolumeMixerWindow : MicaWindow
             _nativeOsdOriginalExStyle | WS_EX_LAYERED | WS_EX_TRANSPARENT);
         SetWindowPos(_nativeOsdElement, 0, -99999, -99999, 0, 0,
             SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-        ShowWindow(_nativeOsdElement, SW_MINIMIZE);
-        Logger.Info("Successfully hid volume OSD.");
+        ShowWindow(_nativeOsdElement, SW_SHOWMINNOACTIVE);
+        Logger.Debug("Successfully hid volume OSD.");
     }
 
     public static void ShowVolumeOsd()
@@ -230,9 +305,8 @@ public partial class VolumeMixerWindow : MicaWindow
         SetWindowLong(_nativeOsdElement, GWL_EXSTYLE, _nativeOsdOriginalExStyle);
         SetWindowPos(_nativeOsdElement, 0, 0, 0, 0, 0,
             SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-        ShowWindow(_nativeOsdElement, SW_RESTORE);
-        _nativeOsdElement = IntPtr.Zero;
-        Logger.Info("Successfully restored volume OSD.");
+        ShowWindow(_nativeOsdElement, SW_SHOWNOACTIVATE);
+        Logger.Debug("Successfully restored volume OSD.");
     }
 
     private void AnimateExpandCollapse(bool expand)

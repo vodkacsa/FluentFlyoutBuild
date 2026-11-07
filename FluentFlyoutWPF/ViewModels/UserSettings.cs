@@ -33,6 +33,36 @@ public partial class UserSettings : ObservableObject
     ];
 
     /// <summary>
+    /// Saved width of the settings window
+    /// </summary>
+    [ObservableProperty]
+    public partial double SettingsWindowWidth { get; set; }
+
+    /// <summary>
+    /// Saved height of the settings window
+    /// </summary>
+    [ObservableProperty]
+    public partial double SettingsWindowHeight { get; set; }
+
+    /// <summary>
+    /// Saved horizontal position of the settings window
+    /// </summary>
+    [ObservableProperty]
+    public partial double SettingsWindowLeft { get; set; }
+
+    /// <summary>
+    /// Saved vertical position of the settings window
+    /// </summary>
+    [ObservableProperty]
+    public partial double SettingsWindowTop { get; set; }
+
+    /// <summary>
+    /// Saved window state of the settings window
+    /// </summary>
+    [ObservableProperty]
+    public partial WindowState SettingsWindowState { get; set; }
+
+    /// <summary>
     /// Use a compact layout
     /// </summary>
     [ObservableProperty]
@@ -290,6 +320,9 @@ public partial class UserSettings : ObservableObject
     [ObservableProperty]
     public partial bool PauseOtherSessionsEnabled { get; set; }
 
+    [ObservableProperty]
+    public partial string PinnedSessionId { get; set; }
+
     /// <summary>
     /// Enable subtle animations for the lock keys flyout indicator
     /// </summary>
@@ -465,6 +498,13 @@ public partial class UserSettings : ObservableObject
     public partial bool TaskbarWidgetScrollingEnabled { get; set; }
 
     /// <summary>
+    /// Controls whether scrolling over the taskbar widget adjusts master or player volume.
+    /// 0: Off, 1: Master volume, 2: Player volume
+    /// </summary>
+    [ObservableProperty]
+    public partial int TaskbarWidgetScrollVolumeMode { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the taskbar widget scrolling text should loop forever.
     /// </summary>
     [ObservableProperty]
@@ -585,6 +625,9 @@ public partial class UserSettings : ObservableObject
     public partial bool VolumeControlEnabled { get; set; }
 
     [ObservableProperty]
+    public partial bool VolumeFlyoutShortcutEnabled { get; set; }
+
+    [ObservableProperty]
     public partial bool VolumeControlAboveMediaFlyout { get; set; }
 
     [ObservableProperty]
@@ -632,8 +675,29 @@ public partial class UserSettings : ObservableObject
     /// Gets whether premium features are unlocked (runtime only, not persisted)
     /// </summary>
     [XmlIgnore]
+    [NotifyPropertyChangedFor(nameof(IsPremiumUnlockedBannerOpen))]
     [ObservableProperty]
     public partial bool IsPremiumUnlocked { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the premium unlocked banner has been closed.
+    /// </summary>
+    [NotifyPropertyChangedFor(nameof(IsPremiumUnlockedBannerOpen))]
+    [ObservableProperty]
+    public partial bool PremiumUnlockedBannerClosedOnce { get; set; }
+
+    [XmlIgnore]
+    public bool IsPremiumUnlockedBannerOpen
+    {
+        get => IsStoreVersion && IsPremiumUnlocked && !PremiumUnlockedBannerClosedOnce;
+        set
+        {
+            if (!value && IsStoreVersion && IsPremiumUnlocked)
+            {
+                PremiumUnlockedBannerClosedOnce = true;
+            }
+        }
+    }
 
     /// <summary>
     /// Gets or sets the opacity level of the acrylic blur effect.
@@ -647,12 +711,17 @@ public partial class UserSettings : ObservableObject
     /// <summary>
     /// Gets whether this is a Store version. Once false, always false (only if last known version was not null).
     /// </summary>
+    [NotifyPropertyChangedFor(nameof(IsPremiumUnlockedBannerOpen))]
     [ObservableProperty]
     public partial bool IsStoreVersion { get; set; }
 
     [XmlIgnore]
     [ObservableProperty]
     public partial string PremiumPrice { get; set; }
+
+    [XmlIgnore]
+    [ObservableProperty]
+    public partial string PremiumPurchaseAction { get; set; }
 
     /// <summary>
     /// Last time the program has sent an update notification in Unix seconds.
@@ -705,6 +774,11 @@ public partial class UserSettings : ObservableObject
         NextUpDuration = 2000;
         NIconLeftClick = 0;
         CenterTitleArtist = false;
+        SettingsWindowWidth = 900;
+        SettingsWindowHeight = 700;
+        SettingsWindowLeft = double.NaN;
+        SettingsWindowTop = double.NaN;
+        SettingsWindowState = WindowState.Normal;
         FlyoutAnimationEasingStyle = 2;
         LockKeysEnabled = true;
         LockKeysCapsEnabled = true;
@@ -720,9 +794,10 @@ public partial class UserSettings : ObservableObject
         DisableIfFullscreen = true;
         LockKeysBoldUi = false;
         LockKeysMonitorPreference = 0;
-        LastKnownVersion = "";
+        LastKnownVersion = string.Empty;
         SeekbarEnabled = false;
         PauseOtherSessionsEnabled = false;
+        PinnedSessionId = string.Empty;
         LockKeysAnimated = true;
         LockKeysInsertEnabled = true;
         MediaFlyoutBackgroundBlur = 0;
@@ -746,6 +821,7 @@ public partial class UserSettings : ObservableObject
         TaskbarWidgetControlsPosition = 1;
         TaskbarWidgetAnimated = true;
         TaskbarWidgetScrollingEnabled = false;
+        TaskbarWidgetScrollVolumeMode = 1;
         TaskbarWidgetScrollingTextSpeed = 20;
         TaskbarWidgetScrollingTextLoopForever = false;
         TaskbarVisualizerEnabled = false;
@@ -760,6 +836,7 @@ public partial class UserSettings : ObservableObject
         TaskbarVisualizerAudioPeakLevel = 3;
         TaskbarVisualizerBaselineAutoHide = false;
         VolumeControlEnabled = false;
+        VolumeFlyoutShortcutEnabled = true;
         VolumeControlAboveMediaFlyout = false;
         VolumeControlDuration = 3000;
         VolumeMixerEnabled = false;
